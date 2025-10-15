@@ -10,7 +10,7 @@
   <meta name="generator" content="quarto-1.8.24">
 
   <meta name="author" content="Joshua Wilson Black">
-  <meta name="dcterms.date" content="2025-10-15">
+  <meta name="dcterms.date" content="2025-10-16">
   <title>Logistic Regression</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -236,7 +236,7 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
     </div>
 </div>
 
-  <p class="date">2025-10-15</p>
+  <p class="date">2025-10-16</p>
 
 </section>
 <section id="overview" class="slide level2">
@@ -346,7 +346,7 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 <section id="generalised-linear-models" class="slide level2">
 <h2>Generalised linear models</h2>
 <ul>
-<li class="fragment">We need: something associated with our explanatory variable which we can model using the tools of linear regression.</li>
+<li class="fragment">We need: something associated with our response variable which we can model using the tools of linear regression.</li>
 <li class="fragment"><span class="red">Generalised linear models</span> are a group of models which enable this.</li>
 <li class="fragment"><span class="red">Logistic regression</span> is a generalised linear model which models the ‘log-odds’ (= ‘logits’) of an event.</li>
 </ul>
@@ -461,7 +461,7 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 </section>
 <section id="model-coefficients" class="slide level2 smaller">
 <h2>Model Coefficients</h2>
-<div class="cell" data-tbl-colwidths="[10,10,10,10,10]">
+<div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href=""></a>broom<span class="sc">::</span><span class="fu">tidy</span>(fit_1)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div data-pagedtable="false">
@@ -475,7 +475,7 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 <li class="fragment">Cool points is scaled so <code>(Intercept)</code> gives log-odds of mean <code>cool_points</code>.
 <ul>
 <li class="fragment">i.e.: more likely to use ‘Variant 2’.</li>
-<li class="fragment">How much? Prob = <code>plogis(0.45)</code> = 0.58.</li>
+<li class="fragment">How much? Prob = <code>plogis(0.35)</code> = 0.59.</li>
 </ul></li>
 <li class="fragment">Each 1 s.d. increase in <code>cool_points</code> increases log odds by 1.
 <ul>
@@ -483,7 +483,7 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 </ul></li>
 </ul>
 </section>
-<section id="plot-predictions-response" class="slide level2">
+<section id="plot-predictions-response" class="slide level2 smaller">
 <h2>Plot Predictions (response)</h2>
 <div class="fragment">
 <div class="cell">
@@ -505,7 +505,7 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 </div>
 </div>
 </section>
-<section id="plot-predictions-link" class="slide level2">
+<section id="plot-predictions-link" class="slide level2 smaller">
 <h2>Plot Predictions (link)</h2>
 <div class="fragment">
 <div class="cell">
@@ -624,7 +624,6 @@ styleinfrml -0.243  0.019  0.033  0.031 -0.009</code></pre>
 <div class="refs">
 
 </div>
-<!-- Mention normally distributed sampling statistics?-->
 
 <div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
 <div id="ref-lme4" class="csl-entry" role="listitem">

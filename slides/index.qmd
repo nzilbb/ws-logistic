@@ -152,7 +152,7 @@ plot_data |>
       y = y
     )
   ) +
-  geom_jitter(height = 0.01, alpha = 0.3) +
+  geom_jitter(height = 0.01, alpha = 0.3)
 ```
 
 ::::
@@ -244,7 +244,7 @@ plot_data |>
 
 ## Generalised linear models
 
-- We need: something associated with our explanatory variable which we 
+- We need: something associated with our response variable which we 
 can model using the tools of linear regression.
 - [Generalised linear models]{.red} are a group of models which enable this.
 - [Logistic regression]{.red} is a generalised linear model which models the
@@ -462,7 +462,7 @@ broom::tidy(fit_1)
 - Each 1 s.d. increase in `cool_points` increases log odds by 1.
   - This means different things at different levels of _probability_ 
 
-## Plot Predictions (response)
+## Plot Predictions (response) {.smaller}
 
 ::: fragment
 
@@ -479,7 +479,7 @@ estimate_relation(
 
 :::
 
-## Plot Predictions (link)
+## Plot Predictions (link) {.smaller}
 
 ::: fragment
 
