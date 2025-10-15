@@ -5,3 +5,5 @@ Slides and some exercises for a short workshop on logistic regression in R.
 
 - `analysis.R` contains skeleton code for two exercises.
 - `slides/` contains the slides.
+
+To view the slides in your browser go [here](nzilbb.github.io/ws-logistic/slides/)
