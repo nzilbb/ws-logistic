@@ -1,0 +1,623 @@
+---
+title: "Logistic Regression"
+date: today
+# For author options see : 
+# https://quarto.org/docs/authoring/front-matter.html#authors-and-affiliations
+# NB: multiple authors can be added here.
+author:
+  - name:
+      given: Joshua
+      family: Wilson Black
+    email: joshua.black@canterbury.ac.nz
+    orcid: 0000-0002-8272-5763
+    affiliation: 
+      - "Te Kāhui Roro Reo | New Zealand Institute of Language, Brain and Behaviour"
+      - "Te Whare Wānanga o Waitaha | University of Canterbury"
+format:
+  revealjs:
+    theme: [custom.scss]
+    incremental: true
+    logo: images/NZILBB-small.svg
+    df-print: paged
+    template-partials:
+      - title-slide.html
+    title-slide-attributes:
+      # If you have Marsden funding, change image name to `nzilbb-uc-marsden.svg`
+      data-background-image: images/nzilbb-uc.svg
+      # First number controls the horizontal position, second controls vertical.
+      data-background-position: '50% 5%'
+      # Controls size of image relative to width of the slide.
+      data-background-size: 50%
+    embed-resources: false
+    include-in-header:
+      - text: |
+          <link rel="icon" type="image/png" sizes="32x32" href=".//images/fav.png" />
+bibliography: 
+  - grateful-refs.bib
+  - stat_workshops.bib
+editor: 
+  markdown: 
+    wrap: 72
+execute: 
+  echo: true
+knitr:
+  opts_chunk: 
+    dev: "png"
+    dev.args: 
+      bg: "transparent"
+---
+
+```{r}
+#| echo: false
+library(tidyverse)
+library(glue)
+library(here)
+library(lme4)
+library(lmerTest)
+library(modelbased)
+library(patchwork)
+library(ModelMetrics)
+
+theme_set(theme_minimal(base_size = 20))
+```
+
+## Overview
+
+1. What is a logistic regression?
+    - ...and generalised linear models more broadly
+2. Examples of logistic and mixed-effects logistic regressions in R.
+
+## About you
+
+- You know something about linear regression.
+- But, how can I use linear models for non-linear explanatory variables!?
+    - e.g. presence or absence of a linguistic variant.
+    - e.g. binary choice in an experiment.
+
+## Crash course
+
+::: r-stack
+
+:::: fragment
+
+```{r}
+#| echo: false
+plot_data <- 
+  tibble(
+    x = rnorm(n=1000),
+    y = x * 2.5 + rnorm(n=1000, sd = 3)
+  )
+
+plot_data |> 
+  ggplot(
+    aes(
+      x = x,
+      y = y
+    )
+  ) +
+  geom_point(alpha = 0.7)
+```
+
+
+::::
+
+:::: fragment
+
+```{r}
+#| echo: false
+plot_data |> 
+  ggplot(
+    aes(
+      x = x,
+      y = y
+    )
+  ) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", linewidth = 2, colour = "blue", se = FALSE)
+```
+
+
+
+::::
+
+:::: fragment
+
+[Draw straight line through dots!]{.big .backlight}
+
+::::
+
+:::: fragment
+
+```{r}
+#| echo: false
+plot_data <- 
+  tibble(
+    x = rnorm(n=1000),
+    y = if_else(
+        x < 0, 
+        rbinom(n=1000, size=1, prob=0.3),
+        rbinom(n=1000, size=1, prob=0.8)
+    )
+  ) |> 
+  mutate(
+    y = factor(
+      if_else(y == 0, "Variant 1", "Variant 2"),
+    )
+  )
+
+plot_data |> 
+  ggplot(
+    aes(
+      x = x,
+      y = y
+    )
+  ) +
+  geom_jitter(height = 0.01, alpha = 0.3) +
+```
+
+::::
+
+:::: fragment
+
+[🤷]{.real-big}
+
+::::
+
+:::: fragment
+
+```{r}
+#| echo: false
+plot_data |>
+  mutate(
+    y = if_else(
+      y == "Variant 1", 0, 1
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = x,
+      y = y
+    )
+  ) +
+  geom_jitter(height = 0.01, alpha = 0.3)
+```
+
+::::
+
+:::: fragment
+
+```{r}
+#| echo: false
+plot_data |>
+  mutate(
+    y = if_else(
+      y == "Variant 1", 0, 1
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = x,
+      y = y
+    )
+  ) +
+  geom_jitter(height = 0.01, alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 2)
+```
+
+::::
+
+:::: fragment
+
+[🙅]{.real-big}
+
+::::
+
+:::: fragment
+
+```{r}
+#| echo: false
+plot_data |>
+  mutate(
+    y = if_else(
+      y == "Variant 1", 0, 1
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = x,
+      y = y
+    )
+  ) +
+  geom_jitter(height = 0.01, alpha = 0.3) +
+  geom_smooth(method = "glm", method.args = "binomial", se = FALSE, linewidth = 2)
+```
+
+::::
+
+:::: fragment
+
+[✨🧙✨]{.real-big}
+
+::::
+
+:::
+
+## Generalised linear models
+
+- We need: something associated with our explanatory variable which we 
+can model using the tools of linear regression.
+- [Generalised linear models]{.red} are a group of models which enable this.
+- [Logistic regression]{.red} is a generalised linear model which models the
+'log-odds' (= 'logits') of an event.
+
+## Odds {.smaller}
+
+- [🤖]{.big}: _The odds of successfully navigating an asteroid field are 3720 to 1_
+    - i.e.: in 3721 trials, you'll succeed once.
+    - i.e.: the probability is 1/3721 = 0.0003.
+- [🎭]{.big}: _Knew that we ventured on such dangerous seas_  
+_That if we wrought out life 'twas ten to one_
+    - i.e.: if we go to see 11 times, we'll die 10 times.
+    - i.e.: probability of survival is 1/11 = 0.0909...
+- Odds from probability: $\frac{p}{1-p}$
+    
+## Log Odds
+
+:::: fragment
+```{r}
+#| echo: false
+plot_data <- 
+  tibble(
+    x = seq(0, 0.999, by = 0.01)
+  ) |> 
+  mutate(
+    y = x
+  )
+
+annote_points <- tibble(
+  prob = c(0.1, 0.5, 0.9),
+  odds = prob/(1-prob),
+  log_odds = log(odds),
+  label_prob = as.character(glue("Prob={prob}")),
+  label_odds = as.character(
+    glue("{prob}/(1-{prob})={round(odds, 2)}")
+  ),
+  label_logodds = as.character(
+    glue(
+      "log({round(odds, 2)})={round(log_odds, 2)} "
+    )
+  )
+)
+
+prob_plot <- plot_data |> 
+  ggplot(
+    aes(
+      x = x,
+      y = y
+    )  
+  ) +
+  geom_path(linewidth = 1) +
+  geom_point(aes(x=prob, y=prob), size = 2, data=annote_points) +
+  labs(
+    y = "Probability",
+    x = "Probability"
+  )
+
+odds_plot <- plot_data |>
+  ggplot(
+    aes(
+      x = x,
+      y = x/(1-x)
+    )
+  ) +
+  geom_path(linewidth = 1) +
+  geom_point(aes(x=prob, y=odds), size = 2, data=annote_points) +
+  labs(
+    y = "Odds (p/(1-p))",
+    x = "Probability"
+  )
+
+log_plot <- plot_data |> 
+  ggplot(
+    aes(
+      x = x,
+      y = log(x/(1-x))
+    )
+  ) +
+  geom_path(linewidth = 1) +
+  geom_point(aes(x=prob, y=log_odds), size = 2, data=annote_points) +
+  labs(
+    y = "Log odds",
+    x = "Probability"
+  )
+
+prob_plot + odds_plot + log_plot
+```
+::::
+
+- Prob: 0 to 1; Odds: 0 to +∞; Log odds: -∞ to +∞ 
+
+## Regression with Log-Odds
+
+```{r}
+#| echo: false
+set.seed(2)
+sim_data <- 
+  tibble(
+    cool_points = rnorm(n=70)
+  ) |> 
+  mutate(
+    prob = (cool_points-min(cool_points))/
+      (max(cool_points)-min(cool_points)),
+    y_binom = map_dbl(prob, ~ rbinom(n=1, size=1, prob=.x)),
+    variant = factor(
+      if_else(y_binom == 0, "Variant 1", "Variant 2")
+    )
+  )
+
+sim_data |> 
+  ggplot(
+    aes(
+      x = cool_points,
+      y = variant
+    )
+  ) +
+  geom_jitter(height = 0.1)
+```
+
+## Regression with Log-Odds (2)
+
+- Use the `glm()` function with `family = binomial`.
+
+::: fragment
+```{r}
+fit_1 <- glm(variant ~ cool_points, data = sim_data, family = binomial) 
+```
+:::
+
+## Model Diagnostics
+
+- Standard residual plots aren't very informative!
+
+::: fragment
+```{r}
+#| echo: false
+to_plot <- 
+  tibble(
+    linear_pred = predict(fit_1),
+    residuals = resid(fit_1)
+  )
+
+to_plot |> 
+  ggplot(
+    aes(
+      x = linear_pred,
+      y = residuals
+    )
+  ) +
+  geom_point()
+```
+
+::::
+
+## Model Diagnostics (2) {.smaller}
+
+- One possibility is to 'bin' the residuals like so:
+
+::: fragment
+
+```{r}
+#| echo: false
+to_plot <- to_plot |> 
+  mutate(
+    linear_bins = cut(linear_pred, breaks = 20, labels = FALSE)
+  ) |> 
+  group_by(linear_bins) |> 
+  summarise(
+    residuals = mean(residuals),
+    n = n()
+  )
+
+to_plot |> 
+  ggplot(
+    aes(
+      x = linear_bins,
+      y = residuals,
+      size = sqrt(n)
+    )
+  ) +
+  geom_point()
+```
+
+:::
+
+- For more see advice on readings at end of slides.
+
+## Goodness of Fit
+
+- AUC is a good method, which is not uncommon.
+- AUC measures classification performance.
+
+::: fragment
+```{r}
+#| output-location: fragment
+# auc() is from ModelMetrics.
+auc(fit_1)
+```
+:::
+
+- AUC of 0.5 is random guessing.
+- Report some measure of goodness of fit.
+
+## Model Coefficients {.smaller}
+
+```{r}
+
+broom::tidy(fit_1)
+```
+
+- Cool points is scaled so `(Intercept)` gives log-odds of mean `cool_points`. 
+  - i.e.: more likely to use 'Variant 2'.
+  - How much? Prob = `plogis(0.35)` = 0.59.
+- Each 1 s.d. increase in `cool_points` increases log odds by 1.
+  - This means different things at different levels of _probability_ 
+
+## Plot Predictions (response)
+
+::: fragment
+
+```{r}
+#| warning: false
+#| output-location: fragment
+# Using estimate_relation from modelbased package.
+estimate_relation(
+    fit_1,
+    by = "cool_points"
+  ) |> 
+  plot()
+```
+
+:::
+
+## Plot Predictions (link)
+
+::: fragment
+
+```{r}
+#| warning: false
+#| output-location: fragment
+estimate_link(
+    fit_1,
+    by = "cool_points"
+  ) |> 
+  plot()
+```
+
+:::
+
+## When?
+
+- Any time you have a _binary_ distinction.
+- Forced choice in experiments.
+- A linguistic variant of interest vs. all other variants.
+- More than two categories? Maybe try [multinomial logistic regression](https://bookdown.org/chua/ber642_advanced_regression/multinomial-logistic-regression.html).
+
+## Bells and Whistles
+
+- Fit mixed effects with `glmer()` and `family = binomial`.
+
+```{r}
+#| echo: false
+# Create a new example.
+sim_participants <-  
+  tibble(
+    participant_name = randomNames::randomNames(70),
+    year_of_birth = sample(seq(1920:1999), size = 70, replace = T),
+    rides_bike = sample(c(TRUE, FALSE), size = 70, replace = T),
+    cool_points = if_else(rides_bike, rnorm(n=70), rnorm(n=70, mean=0.1)),
+    eats_pasta = sample(c(TRUE, FALSE), size = 70, replace = T),
+    idiosyncracy = rnorm(n=70, sd=0.5)
+  ) 
+
+sim_obs <- sim_participants |> 
+  mutate(
+    more_explanatory = map(
+      participant_name,
+      ~ {
+        n_obs = sample(10:60, size = 1)
+        tibble(
+          preceeding_environment = factor(
+            sample(
+              c("env_1", "env_2", "env_3"), size = n_obs, replace = T
+            )
+          ),
+          following_environment = factor(
+            sample(
+              c("env_1", "env_2", "env_3"), size = n_obs, replace = T
+            )
+          ),
+          style = factor(
+            sample(
+              c("formal", "informal"), size = n_obs, replace = T
+            )
+          ),
+        )
+      }
+    )
+  ) |> 
+  unnest(more_explanatory) |> 
+  mutate(
+    pe_coef = case_when(
+      preceeding_environment == "env_1" ~ -0.2,
+      preceeding_environment == "env_2" ~ 0,
+      preceeding_environment == "env_3" ~ 0.1,
+    ),
+    fe_coef = case_when(
+      preceeding_environment == "env_1" ~ 0.1,
+      preceeding_environment == "env_2" ~ -0,
+      preceeding_environment == "env_3" ~ -0.25,
+    ), 
+    style_coef = if_else(
+      style == "formal", -0.9, 0.2
+    ),
+    yob_s = scale(year_of_birth),
+    log_odds = 
+      -0.2 + 0.01 * year_of_birth + 0.5*rides_bike + 0.3*cool_points + pe_coef + 
+      fe_coef + style_coef + idiosyncracy,
+    prob = plogis(log_odds),
+    y_binom = map_dbl(prob, ~ rbinom(n=1, size=1, prob=.x)),
+    variant = factor(if_else(
+      y_binom == 0, "Variant 1", "Variant_2"
+    ))
+  )
+
+```
+
+
+::: fragment
+
+```{r}
+fit_2 <- glmer(
+  variant ~ year_of_birth + cool_points + rides_bike + eats_pasta + style +
+    (1|participant_name),
+  data = sim_obs,
+  family = binomial
+)
+```
+
+:::
+
+## Summary
+
+```{r}
+summary(fit_2)
+```
+## Plot Predictions
+
+```{r}
+estimate_relation(
+    fit_2,
+    by= c("cool_points", "rides_bike")
+  ) |> 
+  plot()
+```
+
+
+## Further Reading
+
+- @sondereggerRegressionModelingLinguistic2023, Chapter 6.
+- @winterStatisticsLinguistsIntroduction2019, Chapter 12.
+
+# References
+
+```{r}
+#| echo: false
+grateful::nocite_references(
+  grateful::cite_packages(output = "citekeys", out.dir = here())
+)
+```
+
+
+::: refs
+
+:::
